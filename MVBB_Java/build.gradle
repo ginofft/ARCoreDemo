@@ -1,0 +1,16 @@
+plugins {
+    id 'java-library'
+}
+java {
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
+}
+
+dependencies {
+    implementation("org.ejml:ejml-core:0.41")
+    implementation("org.ejml:ejml-ddense:0.41")
+}
+jar {
+    archiveBaseName = 'gs-gradle'
+    archiveVersion =  '0.1.0'
+}
