@@ -96,7 +96,7 @@ public class Texture implements Closeable {
     this(render, target, wrapMode, /*useMipmaps=*/ true);
   }
 
-  public Texture(SampleRender render, Target target, WrapMode wrapMode, boolean useMipmaps) {
+  public Texture(SampleRender render, Target target, WrapMode wrapMode, boolean useMipmaps){
     this.target = target;
 
     GLES30.glGenTextures(1, textureId, 0);

@@ -5,8 +5,6 @@ import com.google.arcore.java.common.samplerender.Mesh
 import com.google.arcore.java.common.samplerender.SampleRender
 import com.google.arcore.java.common.samplerender.Shader
 import com.google.arcore.java.common.samplerender.VertexBuffer
-import com.google.arcore.kotlin.helpers.TextRenderer.Companion.NDC_QUAD_COORDS_BUFFER
-import com.google.arcore.kotlin.helpers.TextRenderer.Companion.SQUARE_TEX_COORDS_BUFFER
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.FloatBuffer
@@ -14,34 +12,34 @@ import java.nio.FloatBuffer
 class LineRenderer {
     companion object
     {
-        val TAG = "LineRenderer"
-        val COORDS_BUFFER_SIZE = 1 * 6 * 4 // 2 coordinates x 2 elements x 4 bytes (float)
+        private const val TAG = "LineRenderer"
+        private const val COORDS_PER_VERTEX = 3; //x,y,z
+        private const val VERTICES_PER_BUFFER = 2;
+        private const val BYTES_PER_FLOAT = Float.SIZE_BYTES
+        private const val COORDS_BUFFER_SIZE = VERTICES_PER_BUFFER * COORDS_PER_VERTEX * BYTES_PER_FLOAT // 2 vertices x 3 coordinates x 4 bytes per float
 
-        val NDC_QUAD_COORDS_BUFFER =
+        private val NDC_QUAD_COORDS_BUFFER =  //Template buffer
             ByteBuffer.allocateDirect(COORDS_BUFFER_SIZE).order(
                 ByteOrder.nativeOrder()
             ).asFloatBuffer().apply {
                 put(
                     floatArrayOf(
-                        0.0f, 0.0f, -1.5f, 1.5f, 1.5f, -1.5f
+                        -1.5f, -1.5f, 0.0f, 1.5f, 1.5f, -1.5f
                     )
                 )
             }
     }
-
-    lateinit var mesh:Mesh
-    lateinit var shader: Shader
     lateinit var vertexBuffer: VertexBuffer
-    fun onSurfaceCreated(render: SampleRender){
-        shader = Shader.createFromAssets(render,
+    lateinit var mesh: Mesh
+    var shader: Shader
+    constructor(render:SampleRender)
+    {
+        shader = Shader.createFromAssets(
+            render,
             "shaders/line.vert",
             "shaders/line.frag",
-            null
-            )
-            .setVec4("u_Color", floatArrayOf(255.0f, 255.0f, 0.0f, 1.0f))
-        vertexBuffer = VertexBuffer(render, 3, NDC_QUAD_COORDS_BUFFER)
-        var vertexBuffers = arrayOf(vertexBuffer)
-        mesh = Mesh(render, Mesh.PrimitiveMode.LINES, null, vertexBuffers)
+            null)
+            .setVec4("u_Color", floatArrayOf(1.0f, 1.0f, 0.0f, 1.0f))
     }
 
     fun draw(
@@ -50,10 +48,8 @@ class LineRenderer {
         firstCoordinate: FloatArray,
         secondCoordinate: FloatArray
     ){
-        val FloatBuffer = floatArrayToBuffer(firstCoordinate.plus(secondCoordinate))
-        vertexBuffer.set(FloatBuffer)
-        //val vertexBuffers = arrayOf(vertexBuffer)
-        //mesh = Mesh(render, Mesh.PrimitiveMode.LINES, null, vertexBuffers)
+        vertexBuffer = VertexBuffer(render,3, floatArrayToBuffer(firstCoordinate.plus(secondCoordinate)))
+        mesh = Mesh(render, Mesh.PrimitiveMode.LINES, null, arrayOf(vertexBuffer))
         shader
             .setMat4("u_ModelViewProjection", ModelViewProjectionMatrix)
         render.draw(mesh, shader)

@@ -27,9 +27,25 @@ public class MVBB {
             max_x=0;max_y=0;max_z=0;
         }
     }
-    public BoundingBox min_bbox = new BoundingBox();
-    public void minBoundingRect(DMatrixRMaj pts, Double epsilon)
+    public double[][] pnts;
+
+    public BoundingBox min_bbox;
+    public MVBB(double[][] inputPnts)
     {
+        pnts = inputPnts;
+        min_bbox = new BoundingBox();
+    }
+    public MVBB(){
+        pnts =  new double[][]
+                {{110.0f, 120.0f, 100.0f},
+                {100.0f, 100.0f, 120.0f},
+                {100.0f, 120.0f, 110.0f},
+                {100.0f, 100.0f, 100.0f}};
+        min_bbox = new BoundingBox();
+    }
+    public void minBoundingRect(Double epsilon)
+    {
+        DMatrixRMaj pnts = convert2DMatrixRMaj();
         if (epsilon==null)
         {
             epsilon = 0.2;
@@ -46,7 +62,7 @@ public class MVBB {
                 Double j = Math.toRadians(jdeg);
                 DMatrixRMaj R = calculateRotationalMatrix(i,j);
                 DMatrixRMaj rotPnts = new DMatrixRMaj();
-                CommonOps_DDRM.mult(pts, R, rotPnts);
+                CommonOps_DDRM.mult(pnts, R, rotPnts);
                 rotatedPnts.add(rotPnts);
                 double min_x = findMinimumAlongAxis(rotPnts, 0);
                 double max_x = findMaximumAlongAxis(rotPnts, 0);
@@ -70,7 +86,10 @@ public class MVBB {
             }
         }
     }
-
+    public void setPnts(double[][] inputPnts)
+    {
+        pnts = inputPnts;
+    }
     public DMatrixRMaj calculateRotationalMatrix(double i, double j)
     {
         double [][] RotationData =
@@ -99,7 +118,10 @@ public class MVBB {
         CommonOps_DDRM.mult(originalPnts, R, cornerPnts);
         return cornerPnts;
     }
-
+    private DMatrixRMaj convert2DMatrixRMaj()
+    {
+        return new DMatrixRMaj(pnts);
+    }
     private static ArrayList<Double> arrange(Double start, Double end, Double step)
     {
         ArrayList<Double> result = new ArrayList<Double>();

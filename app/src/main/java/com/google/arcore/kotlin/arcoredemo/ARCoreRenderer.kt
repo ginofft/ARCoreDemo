@@ -73,8 +73,9 @@ class ARCoreRenderer(val activity: ARCoreDemo) :
     lateinit var planeRenderer: PlaneRenderer
     lateinit var backgroundRenderer: BackgroundRenderer
     lateinit var virtualSceneFramebuffer: Framebuffer
-    val textRenderer = TextRenderer()
-    val lineRenderer = LineRenderer()
+    lateinit var textRenderer: TextRenderer
+    lateinit var lineRenderer: LineRenderer
+    lateinit var minBoundingBox: MVBB
     var hasSetTextureNames = false
 
     // Point Cloud
@@ -85,10 +86,7 @@ class ARCoreRenderer(val activity: ARCoreDemo) :
     // Keep track of the last point cloud rendered to avoid updating the VBO if point cloud
     // was not changed.  Do this using the timestamp since we can't compare PointCloud objects.
     var lastPointCloudTimestamp: Long = 0
-//    // Line
 
-//    lateinit var lineMesh: Mesh
-//    lateinit var lineShader: Shader
 
     // Virtual object (ARCore pawn)
     lateinit var virtualObjectMesh: Mesh
@@ -135,10 +133,11 @@ class ARCoreRenderer(val activity: ARCoreDemo) :
         // Prepare the rendering objects.
         // This involves reading shaders and 3D model files, so may throw an IOException.
         try {
+            minBoundingBox = MVBB()
             planeRenderer = PlaneRenderer(render)
             backgroundRenderer = BackgroundRenderer(render)
-            textRenderer.onSurfaceCreated(render)
-            lineRenderer.onSurfaceCreated(render)
+            textRenderer = TextRenderer(render)
+            lineRenderer = LineRenderer(render)
             virtualSceneFramebuffer = Framebuffer(render, /*width=*/ 1, /*height=*/ 1)
 
             cubemapFilter =
@@ -160,7 +159,7 @@ class ARCoreRenderer(val activity: ARCoreDemo) :
                 ByteBuffer.allocateDirect(dfgResolution * dfgResolution * dfgChannels * halfFloatSize)
             activity.assets.open("models/dfg.raw").use { it.read(buffer.array()) }
 
-            // SampleRender abstraction leaks here.
+            // SampleRender abstraction leaks here. bruh moment
             GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, dfgTexture.textureId)
             GLError.maybeThrowGLException("Failed to bind DFG texture", "glBindTexture")
             GLES30.glTexImage2D(
@@ -185,7 +184,7 @@ class ARCoreRenderer(val activity: ARCoreDemo) :
                     /*defines=*/ null
                 )
                     .setVec4("u_Color", floatArrayOf(255.0f / 255.0f, 188.0f / 255.0f, 210.0f / 255.0f, 1.0f))
-                    .setFloat("u_PointSize", 20.0f)
+                    .setFloat("u_PointSize", 5.0f)
 
             // four entries per vertex: X, Y, Z, confidence
             pointCloudVertexBuffer =
@@ -193,21 +192,6 @@ class ARCoreRenderer(val activity: ARCoreDemo) :
             val pointCloudVertexBuffers = arrayOf(pointCloudVertexBuffer)
             pointCloudMesh =
                 Mesh(render, Mesh.PrimitiveMode.POINTS, /*indexBuffer=*/ null, pointCloudVertexBuffers)
-
-//            lineShader  =
-//                    Shader.createFromAssets(
-//                        render,
-//                        "shader/line.vert",
-//                        "shader/line.frag",
-//                        null
-//                    )
-//                        .setVec4("u_Color", floatArrayOf(255.0f/255.0f, 0.0f, 0.0f, 1.0f))
-//                        .setFloat("u_LineSize", 10.0f)
-//            lineVertexBuffer =
-//                    VertexBuffer(render, 4, null)
-//            val lineVertexBuffers = arrayOf(lineVertexBuffer)
-//            lineMesh =
-//                    Mesh(render, Mesh.PrimitiveMode.LINES, null, lineVertexBuffers)
 
             // Virtual object to render (ARCore pawn)
             virtualObjectAlbedoTexture =
@@ -217,7 +201,6 @@ class ARCoreRenderer(val activity: ARCoreDemo) :
                     Texture.WrapMode.CLAMP_TO_EDGE,
                     Texture.ColorFormat.SRGB
                 )
-
             virtualObjectAlbedoInstantPlacementTexture =
                 Texture.createFromAsset(
                     render,
@@ -413,7 +396,15 @@ class ARCoreRenderer(val activity: ARCoreDemo) :
             virtualObjectShader.setTexture("u_AlbedoTexture", texture)
             //render.draw(virtualObjectMesh, virtualObjectShader, virtualSceneFramebuffer)
         }
+        Matrix.multiplyMM(modelViewProjectionMatrix,0, projectionMatrix, 0, viewMatrix,0)
         var filteredWrappedAnchors = wrappedAnchors.filter{it.anchor.trackingState == TrackingState.TRACKING}
+        var coordArray = ArrayList<FloatArray>()
+        for ((anchor,_) in filteredWrappedAnchors){
+            coordArray.add(anchor.pose.getTranslation())
+        }
+//        var pnts = Array<Array<Float>>;
+//        minBoundingBox.setPnts(coordArray)
+        //minBoundingBox.minBoundingRect()
         for ((anchor1, _) in filteredWrappedAnchors){
             for ((anchor2,_) in filteredWrappedAnchors){
                 if (!anchor1.equals(anchor2)){
@@ -424,8 +415,7 @@ class ARCoreRenderer(val activity: ARCoreDemo) :
                         viewProjectionMatrix,
                         midPose,
                         camera.pose,
-                        distance.toString())
-                    Matrix.multiplyMM(modelViewProjectionMatrix,0, projectionMatrix, 0, viewMatrix,0)
+                        String.format("%.2f", distance))
                     lineRenderer.draw(render, modelViewProjectionMatrix,
                         anchor1.pose.translation, anchor2.pose.translation)
                 }

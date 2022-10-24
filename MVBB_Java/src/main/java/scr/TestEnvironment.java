@@ -9,9 +9,9 @@ public class TestEnvironment {
                 {100.0f, 120.0f, 110.0f},
                 {100.0f, 100.0f, 100.0f}
         };
-        DMatrixRMaj exPnts = new DMatrixRMaj(temp);
         MVBB exampleBox =  new MVBB();
-        exampleBox.minBoundingRect(exPnts, 0.05);
+        exampleBox.setPnts(temp);
+        exampleBox.minBoundingRect(0.05);
         DMatrixRMaj cornerPnts = exampleBox.calculateCornerPoint();
         System.out.println("Minimum Volume Bounding Box");
         System.out.println("Rotation Angles");
